@@ -1,4 +1,4 @@
-const API_URL = 'http://13.63.91.92:5000/api/students';
+const API_URL = 'http://16.192.119.204:5000/api/students';
 
 const form = document.getElementById('studentForm');
 const tableBody = document.getElementById('studentsTableBody');

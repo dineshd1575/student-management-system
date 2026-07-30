@@ -1,0 +1,26 @@
+
+
+services:
+
+  backend:
+    image: dineshd1575/student-backend:v1
+
+    container_name: student-backend
+
+    restart: always
+
+    ports:
+      - "5000:5000"
+
+  frontend:
+    image: dineshd1575/student-frontend:v1
+
+    container_name: student-frontend
+
+    restart: always
+
+    ports:
+      - "80:80"
+
+    depends_on:
+      - backend

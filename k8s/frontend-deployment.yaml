@@ -20,7 +20,7 @@ spec:
       containers:
       - name: frontend
 
-        image: dineshd1575/student-frontend:v1
+        image: dineshd1575/student-frontend:v3
 
         ports:
         - containerPort: 80

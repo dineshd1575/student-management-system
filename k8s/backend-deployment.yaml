@@ -20,8 +20,8 @@ spec:
       containers:
       - name: backend
 
-        image: dineshd1575/student-backend:v3
-
+        image: dineshd1575/student-backend:v2
+        imagePullPolicy: Always
         ports:
         - containerPort: 5000
 

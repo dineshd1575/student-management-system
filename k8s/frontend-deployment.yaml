@@ -20,8 +20,8 @@ spec:
       containers:
       - name: frontend
 
-        image: dineshd1575/student-frontend:v3
-
+        image: dineshd1575/student-frontend:v8
+        imagePullPolicy: Always
         ports:
         - containerPort: 80
 

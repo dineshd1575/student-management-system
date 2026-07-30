@@ -11,26 +11,29 @@ pipeline {
 
     stages {
 
-        stage('Clone Repository') {
+        stage('Checkout Source') {
             steps {
-                git branch: 'main',
-                url: 'https://github.com/dineshd1575/student-management-system.git'
+                checkout scm
             }
         }
 
-        stage('Build Frontend Image') {
+        stage('Build Frontend') {
             steps {
-                sh '''
-                docker build -t $DOCKER_USER/$FRONTEND_IMAGE:$IMAGE_TAG ./frontend
-                '''
+                sh """
+                docker build --no-cache \
+                -t ${DOCKER_USER}/${FRONTEND_IMAGE}:${IMAGE_TAG} \
+                ./frontend
+                """
             }
         }
 
-        stage('Build Backend Image') {
+        stage('Build Backend') {
             steps {
-                sh '''
-                docker build -t $DOCKER_USER/$BACKEND_IMAGE:$IMAGE_TAG ./backend
-                '''
+                sh """
+                docker build --no-cache \
+                -t ${DOCKER_USER}/${BACKEND_IMAGE}:${IMAGE_TAG} \
+                ./backend
+                """
             }
         }
 
@@ -39,57 +42,61 @@ pipeline {
                 withCredentials([
                     usernamePassword(
                         credentialsId: 'dockerhub',
-                        usernameVariable: 'USERNAME',
-                        passwordVariable: 'PASSWORD'
+                        usernameVariable: 'DOCKER_USERNAME',
+                        passwordVariable: 'DOCKER_PASSWORD'
                     )
                 ]) {
                     sh '''
-                    echo $PASSWORD | docker login -u $USERNAME --password-stdin
+                    echo "$DOCKER_PASSWORD" | docker login \
+                    -u "$DOCKER_USERNAME" \
+                    --password-stdin
                     '''
                 }
             }
         }
 
-        stage('Push Frontend Image') {
+        stage('Push Images') {
             steps {
-                sh '''
-                docker push $DOCKER_USER/$FRONTEND_IMAGE:$IMAGE_TAG
-                '''
-            }
-        }
-
-        stage('Push Backend Image') {
-            steps {
-                sh '''
-                docker push $DOCKER_USER/$BACKEND_IMAGE:$IMAGE_TAG
-                '''
+                sh """
+                docker push ${DOCKER_USER}/${FRONTEND_IMAGE}:${IMAGE_TAG}
+                docker push ${DOCKER_USER}/${BACKEND_IMAGE}:${IMAGE_TAG}
+                """
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
-                sh '''
+                sh """
                 kubectl set image deployment/frontend-deployment \
-                frontend=dineshd1575/student-frontend:$IMAGE_TAG
+                frontend=${DOCKER_USER}/${FRONTEND_IMAGE}:${IMAGE_TAG}
 
                 kubectl set image deployment/backend-deployment \
-                backend=dineshd1575/student-backend:$IMAGE_TAG
-                '''
+                backend=${DOCKER_USER}/${BACKEND_IMAGE}:${IMAGE_TAG}
+
+                kubectl rollout restart deployment/frontend-deployment
+                kubectl rollout restart deployment/backend-deployment
+                """
             }
         }
 
-        stage('Verify Deployment') {
+        stage('Wait for Rollout') {
             steps {
-                sh '''
+                sh """
                 kubectl rollout status deployment/frontend-deployment
                 kubectl rollout status deployment/backend-deployment
-
-                kubectl get pods
-                kubectl get svc
-                '''
+                """
             }
         }
 
+        stage('Verify') {
+            steps {
+                sh """
+                kubectl get deployments
+                kubectl get pods -o wide
+                kubectl get svc
+                """
+            }
+        }
     }
 
     post {
@@ -97,17 +104,14 @@ pipeline {
         success {
             echo "======================================"
             echo "CI/CD Pipeline Completed Successfully"
-            echo "Application Deployed to Kubernetes"
             echo "======================================"
+            sh "docker image prune -f"
         }
 
         failure {
             echo "======================================"
-            echo "Pipeline Failed!"
-            echo "Check Jenkins Console Output"
+            echo "Pipeline Failed"
             echo "======================================"
         }
-
     }
-
 }
